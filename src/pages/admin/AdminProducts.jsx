@@ -141,14 +141,14 @@ export default function AdminProducts() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="label-eyebrow mb-1">Daftar Produk</p>
           <p className="text-sm text-slate-450">Kelola produk frozen food yang Anda jual</p>
         </div>
         <button
           onClick={openCreate}
-          className="bg-navy-900 hover:bg-navy-800 text-frost-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+          className="bg-navy-900 hover:bg-navy-800 text-frost-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors self-start sm:self-auto"
         >
           + Tambah Produk
         </button>
@@ -254,7 +254,8 @@ export default function AdminProducts() {
       )}
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-frost-50 border-b border-frost-200">
               <Th>Produk</Th>
@@ -307,6 +308,7 @@ export default function AdminProducts() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

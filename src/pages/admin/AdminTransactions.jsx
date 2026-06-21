@@ -42,7 +42,7 @@ export default function AdminTransactions() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="label-eyebrow mb-1">Riwayat Transaksi</p>
           <p className="text-sm text-slate-450">Seluruh catatan barang masuk dan keluar</p>
@@ -69,7 +69,8 @@ export default function AdminTransactions() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[760px]">
           <thead>
             <tr className="bg-frost-50 border-b border-frost-200">
               <Th>Tanggal</Th>
@@ -123,6 +124,7 @@ export default function AdminTransactions() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
