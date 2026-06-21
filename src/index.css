@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-frost-100 text-navy-900 font-body antialiased;
+}
+
+::selection {
+  @apply bg-ice-400/30;
+}
+
+:focus-visible {
+  outline: 2px solid #4D8AAD;
+  outline-offset: 2px;
+}
+
+@layer utilities {
+  .label-eyebrow {
+    @apply font-mono text-[11px] tracking-widest2 uppercase text-slate-450;
+  }
+  .num {
+    @apply font-mono tabular-nums;
+  }
+  .card {
+    @apply bg-white border border-frost-200 rounded-xl shadow-panel;
+  }
+  .input {
+    @apply w-full rounded-lg border border-frost-200 px-3 py-2.5 text-sm focus:border-ice-500 outline-none;
+  }
+}
