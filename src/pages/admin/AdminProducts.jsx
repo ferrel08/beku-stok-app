@@ -116,13 +116,27 @@ export default function AdminProducts() {
     setSaving(false)
   }
 
-  async function toggleActive(product) {
-    const { error } = await supabase
-      .from('products')
-      .update({ is_active: !product.is_active })
-      .eq('id', product.id)
-    if (error) setErrorMsg(error.message)
-    else await loadProducts()
+  async function handleDelete(product) {
+    const confirmed = window.confirm(
+      `Hapus produk "${product.name}" secara permanen? Aksi ini tidak bisa dibatalkan.`
+    )
+    if (!confirmed) return
+
+    setErrorMsg('')
+    const { error } = await supabase.from('products').delete().eq('id', product.id)
+
+    if (error) {
+      if (error.code === '23503') {
+        // foreign key violation: produk masih direferensikan stock_transactions
+        setErrorMsg(
+          `"${product.name}" tidak bisa dihapus karena sudah punya riwayat transaksi (pernah masuk/terjual). Hapus permanen hanya bisa untuk produk yang belum pernah ada transaksinya sama sekali.`
+        )
+      } else {
+        setErrorMsg(error.message)
+      }
+    } else {
+      await loadProducts()
+    }
   }
 
   return (
@@ -248,20 +262,19 @@ export default function AdminProducts() {
               <Th>Stok</Th>
               <Th>Harga Beli</Th>
               <Th>Harga Jual</Th>
-              <Th>Status</Th>
               <Th> </Th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-450">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-450">
                   Memuat…
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-450">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-450">
                   Belum ada produk.
                 </td>
               </tr>
@@ -275,13 +288,6 @@ export default function AdminProducts() {
                   </td>
                   <td className="px-4 py-3 num">{formatRupiah(p.price_buy)}</td>
                   <td className="px-4 py-3 num">{formatRupiah(p.price_sell)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`label-eyebrow ${p.is_active ? 'text-ice-600' : 'text-slate-450'}`}
-                    >
-                      {p.is_active ? 'Aktif' : 'Nonaktif'}
-                    </span>
-                  </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <button
                       onClick={() => openEdit(p)}
@@ -290,10 +296,10 @@ export default function AdminProducts() {
                       Ubah
                     </button>
                     <button
-                      onClick={() => toggleActive(p)}
+                      onClick={() => handleDelete(p)}
                       className="text-xs font-medium text-slate-450 hover:text-rust-500"
                     >
-                      {p.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                      Hapus
                     </button>
                   </td>
                 </tr>
