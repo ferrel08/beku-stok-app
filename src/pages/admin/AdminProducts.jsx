@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
+import { useAuth } from '../../context/AuthContext'
 import { formatRupiah } from '../../lib/format'
 import StockGauge from '../../components/StockGauge'
 
@@ -15,6 +16,7 @@ const emptyForm = {
 }
 
 export default function AdminProducts() {
+  const { user } = useAuth()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
@@ -75,9 +77,31 @@ export default function AdminProducts() {
 
     let error
     if (form.id) {
-      // Edit: stok TIDAK diubah lewat sini agar kartu stok tetap akurat.
-      // Penyesuaian stok dilakukan lewat menu "Input Barang Masuk".
+      // Update data produk dulu (tidak termasuk stok)
       ;({ error } = await supabase.from('products').update(payload).eq('id', form.id))
+
+      // Kalau angka stok di form beda dari stok sebelumnya, catat selisihnya
+      // sebagai transaksi penyesuaian (bukan langsung timpa angka stok),
+      // supaya tetap muncul jejaknya di Riwayat Transaksi.
+      if (!error) {
+        const original = products.find((p) => p.id === form.id)
+        const newStock = Number(form.stock) || 0
+        const diff = newStock - Number(original?.stock || 0)
+
+        if (diff !== 0) {
+          const adjType = diff > 0 ? 'in' : 'out'
+          const adjQty = Math.abs(diff)
+          ;({ error } = await supabase.from('stock_transactions').insert({
+            product_id: form.id,
+            type: adjType,
+            quantity: adjQty,
+            unit_price: adjType === 'in' ? payload.price_buy : payload.price_sell,
+            cost_price: adjType === 'out' ? payload.price_buy : 0,
+            note: 'Penyesuaian stok manual',
+            created_by: user.id,
+          }))
+        }
+      }
     } else {
       payload.stock = Number(form.stock) || 0
       ;({ error } = await supabase.from('products').insert(payload))
@@ -179,17 +203,22 @@ export default function AdminProducts() {
               className="input"
             />
           </Field>
-          {!form.id && (
-            <Field label="Stok Awal">
-              <input
-                type="number"
-                min="0"
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                className="input"
-              />
-            </Field>
-          )}
+          <Field label={form.id ? 'Stok Saat Ini' : 'Stok Awal'}>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.stock}
+              onChange={(e) => setForm({ ...form, stock: e.target.value })}
+              className="input"
+            />
+            {form.id && (
+              <span className="text-xs text-slate-450 mt-1 block">
+                Ubah hanya untuk koreksi (mis. hasil stok opname). Selisihnya otomatis tercatat
+                di Riwayat Transaksi.
+              </span>
+            )}
+          </Field>
 
           <div className="md:col-span-3 flex gap-3 pt-2">
             <button
