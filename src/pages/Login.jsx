@@ -29,9 +29,16 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-navy-950 px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <p className="font-display text-2xl text-frost-50 tracking-tight">BEKU.STOK</p>
-          <p className="label-eyebrow text-ice-400 mt-2">Catatan Stok Frozen Food</p>
+        <div className="mb-8 flex flex-col items-center gap-4">
+          <img
+            src="/logo.jpg"
+            alt="Bunds Kitchen"
+            className="w-28 h-28 rounded-full object-cover border-4 border-white/20 shadow-lg"
+          />
+          <div className="text-center">
+            <p className="font-display text-xl text-frost-50 tracking-tight">Bunds Kitchen</p>
+            <p className="label-eyebrow text-ice-400 mt-1.5">Catatan Stok Frozen Food</p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="card bg-white p-7 flex flex-col gap-4">

@@ -22,10 +22,17 @@ export default function Layout({ navItems, title, children }) {
         lg:static lg:translate-x-0 lg:w-60
         ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="px-5 py-6 border-b border-white/10 flex items-center justify-between">
-          <div>
-            <p className="font-display text-[15px] tracking-tight leading-none">BEKU.STOK</p>
-            <p className="label-eyebrow text-ice-400 mt-1.5">Frozen Food Ledger</p>
+        <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.jpg"
+              alt="Bunds Kitchen"
+              className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shrink-0"
+            />
+            <div>
+              <p className="font-display text-[13px] tracking-tight leading-tight text-frost-50">Bunds Kitchen</p>
+              <p className="label-eyebrow text-ice-400 mt-0.5">Catatan Stok</p>
+            </div>
           </div>
           <button
             onClick={() => setMobileNavOpen(false)}
