@@ -40,6 +40,7 @@ export default function AdminDashboard() {
             .from('stock_transactions')
             .select('id, product_id, quantity, unit_price, cost_price, type, created_at')
             .eq('type', 'out')
+            .eq('is_void', false)
             .gte('created_at', since),
         ])
 
