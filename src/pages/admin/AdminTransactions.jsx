@@ -33,7 +33,7 @@ export default function AdminTransactions() {
     let query = supabase
       .from('stock_transactions')
       .select(
-        'id, type, quantity, unit_price, cost_price, payment_method, note, created_at, is_void, voided_at, product_id, products(name, unit), profiles(full_name)'
+        'id, type, quantity, unit_price, cost_price, payment_method, note, created_at, is_void, voided_at, product_id, products(name, unit), profiles!created_by(full_name)'
       )
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
