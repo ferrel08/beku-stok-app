@@ -21,7 +21,7 @@ export default function AdminTransactions() {
       let query = supabase
         .from('stock_transactions')
         .select(
-          'id, type, quantity, unit_price, cost_price, note, created_at, products(name, unit), profiles(full_name)'
+          'id, type, quantity, unit_price, cost_price, payment_method, note, created_at, products(name, unit), profiles(full_name)'
         )
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
@@ -78,6 +78,7 @@ export default function AdminTransactions() {
               <Th>Tipe</Th>
               <Th>Jumlah</Th>
               <Th>Nilai</Th>
+              <Th>Pembayaran</Th>
               <Th>Dicatat oleh</Th>
               <Th>Catatan</Th>
             </tr>
@@ -85,13 +86,13 @@ export default function AdminTransactions() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-450">
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-450">
                   Memuat…
                 </td>
               </tr>
             ) : transactions.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-450">
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-450">
                   Belum ada transaksi.
                 </td>
               </tr>
@@ -116,6 +117,17 @@ export default function AdminTransactions() {
                   </td>
                   <td className="px-4 py-3 num">
                     {formatRupiah(Number(tx.quantity) * Number(tx.unit_price))}
+                  </td>
+                  <td className="px-4 py-3">
+                    {tx.payment_method ? (
+                      <span className={`label-eyebrow ${
+                        tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'
+                      }`}>
+                        {tx.payment_method === 'cash' ? 'Cash' : 'Transfer'}
+                      </span>
+                    ) : (
+                      <span className="text-slate-450">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-450">{tx.profiles?.full_name || '-'}</td>
                   <td className="px-4 py-3 text-slate-450">{tx.note || '-'}</td>

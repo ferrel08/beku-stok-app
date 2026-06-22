@@ -14,7 +14,7 @@ export default function UserSalesHistory() {
       const since = daysAgo(30).toISOString()
       const { data } = await supabase
         .from('stock_transactions')
-        .select('id, quantity, unit_price, note, created_at, products(name, unit)')
+        .select('id, quantity, unit_price, payment_method, note, created_at, products(name, unit)')
         .eq('type', 'out')
         .eq('created_by', user.id)
         .gte('created_at', since)
@@ -57,7 +57,16 @@ export default function UserSalesHistory() {
               <div key={tx.id} className="py-2.5 flex items-center justify-between text-sm">
                 <div>
                   <p className="text-navy-900">{tx.products?.name}</p>
-                  {tx.note && <p className="text-xs text-slate-450">{tx.note}</p>}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {tx.note && <p className="text-xs text-slate-450">{tx.note}</p>}
+                    {tx.payment_method && (
+                      <span className={`label-eyebrow ${
+                        tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'
+                      }`}>
+                        {tx.payment_method === 'cash' ? 'Cash' : 'Transfer'}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="num text-navy-900">{formatRupiah(Number(tx.quantity) * Number(tx.unit_price))}</p>

@@ -3,12 +3,18 @@ import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { formatNumber, formatRupiah, formatDateTime } from '../../lib/format'
 
+const PAYMENT_METHODS = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'transfer', label: 'Transfer' },
+]
+
 export default function UserSalesInput() {
   const { user } = useAuth()
   const [products, setProducts] = useState([])
   const [recent, setRecent] = useState([])
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('cash')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
@@ -25,7 +31,7 @@ export default function UserSalesInput() {
   async function loadRecent() {
     const { data } = await supabase
       .from('stock_transactions')
-      .select('id, quantity, unit_price, note, created_at, products(name, unit)')
+      .select('id, quantity, unit_price, payment_method, note, created_at, products(name, unit)')
       .eq('type', 'out')
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
@@ -67,6 +73,7 @@ export default function UserSalesInput() {
       quantity: Number(quantity),
       unit_price: Number(selectedProduct.price_sell) || 0,
       cost_price: Number(selectedProduct.price_buy) || 0,
+      payment_method: paymentMethod,
       note: note.trim() || null,
       created_by: user.id,
     })
@@ -79,6 +86,7 @@ export default function UserSalesInput() {
       setQuantity('')
       setNote('')
       setProductId('')
+      setPaymentMethod('cash')
       await Promise.all([loadProducts(), loadRecent()])
     }
   }
@@ -120,6 +128,27 @@ export default function UserSalesInput() {
             placeholder="0"
           />
         </label>
+
+        {/* Pilihan metode pembayaran: tombol toggle Cash / Transfer */}
+        <div>
+          <span className="label-eyebrow block mb-1.5">Metode Pembayaran *</span>
+          <div className="flex gap-2">
+            {PAYMENT_METHODS.map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                onClick={() => setPaymentMethod(m.value)}
+                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  paymentMethod === m.value
+                    ? 'bg-navy-900 text-frost-50 border-navy-900'
+                    : 'border-frost-200 text-slate-450 hover:text-navy-900 hover:border-navy-900/30'
+                }`}
+              >
+                {m.value === 'cash' ? '💵' : '🏦'} {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {selectedProduct && (
           <div className="flex items-center justify-between rounded-lg bg-frost-50 border border-frost-200 px-3 py-2.5">
@@ -169,7 +198,16 @@ export default function UserSalesInput() {
             <div key={tx.id} className="py-3 flex items-center justify-between text-sm">
               <div>
                 <p className="font-medium text-navy-900">{tx.products?.name}</p>
-                <p className="text-xs text-slate-450">{formatDateTime(tx.created_at)}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-slate-450">{formatDateTime(tx.created_at)}</p>
+                  {tx.payment_method && (
+                    <span className={`label-eyebrow ${
+                      tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'
+                    }`}>
+                      {tx.payment_method === 'cash' ? 'Cash' : 'Transfer'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <p className="num font-medium text-navy-900">
