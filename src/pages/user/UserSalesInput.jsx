@@ -2,14 +2,21 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { formatNumber, formatRupiah, formatDateTime } from '../../lib/format'
+import ReceiptModal from '../../components/ReceiptModal'
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
   { value: 'transfer', label: 'Transfer' },
 ]
 
+function generateReceiptNumber() {
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `BK-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+}
+
 export default function UserSalesInput() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [products, setProducts] = useState([])
   const [recent, setRecent] = useState([])
   const [productId, setProductId] = useState('')
@@ -18,6 +25,7 @@ export default function UserSalesInput() {
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
+  const [receipt, setReceipt] = useState(null)
 
   async function loadProducts() {
     const { data } = await supabase
@@ -59,14 +67,15 @@ export default function UserSalesInput() {
     if (selectedProduct && Number(quantity) > Number(selectedProduct.stock)) {
       setMessage({
         type: 'error',
-        text: `Stok ${selectedProduct.name} hanya tersisa ${formatNumber(selectedProduct.stock)} ${
-          selectedProduct.unit
-        }.`,
+        text: `Stok ${selectedProduct.name} hanya tersisa ${formatNumber(selectedProduct.stock)} ${selectedProduct.unit}.`,
       })
       return
     }
 
     setSaving(true)
+    const receiptNumber = generateReceiptNumber()
+    const now = new Date().toISOString()
+
     const { error } = await supabase.from('stock_transactions').insert({
       product_id: productId,
       type: 'out',
@@ -82,6 +91,18 @@ export default function UserSalesInput() {
     if (error) {
       setMessage({ type: 'error', text: error.message })
     } else {
+      // Tampilkan modal struk setelah berhasil simpan
+      setReceipt({
+        receiptNumber,
+        productName: selectedProduct.name,
+        quantity: Number(quantity),
+        unit: selectedProduct.unit,
+        unitPrice: Number(selectedProduct.price_sell),
+        paymentMethod,
+        note: note.trim() || null,
+        createdAt: now,
+        cashierName: profile?.full_name || 'Kasir',
+      })
       setMessage({ type: 'success', text: 'Penjualan berhasil dicatat.' })
       setQuantity('')
       setNote('')
@@ -92,135 +113,146 @@ export default function UserSalesInput() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      <form onSubmit={handleSubmit} className="card p-6 flex flex-col gap-4 lg:col-span-2 h-fit">
-        <p className="label-eyebrow">Catat Penjualan</p>
+    <>
+      {/* Modal struk — muncul otomatis setelah simpan berhasil */}
+      {receipt && (
+        <ReceiptModal
+          transaction={receipt}
+          onClose={() => setReceipt(null)}
+        />
+      )}
 
-        <label className="block">
-          <span className="label-eyebrow block mb-1.5">Produk *</span>
-          <select
-            required
-            value={productId}
-            onChange={(e) => setProductId(e.target.value)}
-            className="input"
-          >
-            <option value="">Pilih produk…</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} (stok: {formatNumber(p.stock)} {p.unit})
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <form onSubmit={handleSubmit} className="card p-6 flex flex-col gap-4 lg:col-span-2 h-fit">
+          <p className="label-eyebrow">Catat Penjualan</p>
 
-        <label className="block">
-          <span className="label-eyebrow block mb-1.5">
-            Jumlah {selectedProduct ? `(${selectedProduct.unit})` : ''} *
-          </span>
-          <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            required
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="input"
-            placeholder="0"
-          />
-        </label>
+          <label className="block">
+            <span className="label-eyebrow block mb-1.5">Produk *</span>
+            <select
+              required
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              className="input"
+            >
+              <option value="">Pilih produk…</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} (stok: {formatNumber(p.stock)} {p.unit})
+                </option>
+              ))}
+            </select>
+          </label>
 
-        {/* Pilihan metode pembayaran: tombol toggle Cash / Transfer */}
-        <div>
-          <span className="label-eyebrow block mb-1.5">Metode Pembayaran *</span>
-          <div className="flex gap-2">
-            {PAYMENT_METHODS.map((m) => (
-              <button
-                key={m.value}
-                type="button"
-                onClick={() => setPaymentMethod(m.value)}
-                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                  paymentMethod === m.value
-                    ? 'bg-navy-900 text-frost-50 border-navy-900'
-                    : 'border-frost-200 text-slate-450 hover:text-navy-900 hover:border-navy-900/30'
-                }`}
-              >
-                {m.value === 'cash' ? '💵' : '🏦'} {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {selectedProduct && (
-          <div className="flex items-center justify-between rounded-lg bg-frost-50 border border-frost-200 px-3 py-2.5">
-            <span className="label-eyebrow">Subtotal</span>
-            <span className="num text-base font-semibold text-navy-900">
-              {formatRupiah(subtotal)}
+          <label className="block">
+            <span className="label-eyebrow block mb-1.5">
+              Jumlah {selectedProduct ? `(${selectedProduct.unit})` : ''} *
             </span>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              required
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="input"
+              placeholder="0"
+            />
+          </label>
+
+          <div>
+            <span className="label-eyebrow block mb-1.5">Metode Pembayaran *</span>
+            <div className="flex gap-2">
+              {PAYMENT_METHODS.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(m.value)}
+                  className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                    paymentMethod === m.value
+                      ? 'bg-navy-900 text-frost-50 border-navy-900'
+                      : 'border-frost-200 text-slate-450 hover:text-navy-900 hover:border-navy-900/30'
+                  }`}
+                >
+                  {m.value === 'cash' ? '💵' : '🏦'} {m.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        <label className="block">
-          <span className="label-eyebrow block mb-1.5">Catatan</span>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="input"
-            placeholder="Mis. nama pembeli"
-          />
-        </label>
+          {selectedProduct && (
+            <div className="flex items-center justify-between rounded-lg bg-frost-50 border border-frost-200 px-3 py-2.5">
+              <span className="label-eyebrow">Subtotal</span>
+              <span className="num text-base font-semibold text-navy-900">
+                {formatRupiah(subtotal)}
+              </span>
+            </div>
+          )}
 
-        {message && (
-          <p
-            className={`text-sm rounded-lg px-3 py-2 border ${
-              message.type === 'error'
-                ? 'text-rust-500 bg-rust-500/5 border-rust-500/20'
-                : 'text-ice-600 bg-ice-400/10 border-ice-400/30'
-            }`}
+          <label className="block">
+            <span className="label-eyebrow block mb-1.5">Catatan</span>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="input"
+              placeholder="Mis. nama pembeli"
+            />
+          </label>
+
+          {message && (
+            <p
+              className={`text-sm rounded-lg px-3 py-2 border ${
+                message.type === 'error'
+                  ? 'text-rust-500 bg-rust-500/5 border-rust-500/20'
+                  : 'text-ice-600 bg-ice-400/10 border-ice-400/30'
+              }`}
+            >
+              {message.text}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-navy-900 hover:bg-navy-800 text-frost-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors disabled:opacity-60"
           >
-            {message.text}
-          </p>
-        )}
+            {saving ? 'Menyimpan…' : 'Simpan Penjualan'}
+          </button>
+        </form>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-navy-900 hover:bg-navy-800 text-frost-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors disabled:opacity-60"
-        >
-          {saving ? 'Menyimpan…' : 'Simpan Penjualan'}
-        </button>
-      </form>
-
-      <div className="card p-6 lg:col-span-3">
-        <p className="label-eyebrow mb-4">Penjualan Terbaru Saya</p>
-        <div className="flex flex-col divide-y divide-frost-200">
-          {recent.length === 0 && <p className="text-sm text-slate-450 py-2">Belum ada catatan.</p>}
-          {recent.map((tx) => (
-            <div key={tx.id} className="py-3 flex items-center justify-between text-sm">
-              <div>
-                <p className="font-medium text-navy-900">{tx.products?.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-xs text-slate-450">{formatDateTime(tx.created_at)}</p>
-                  {tx.payment_method && (
-                    <span className={`label-eyebrow ${
-                      tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'
-                    }`}>
-                      {tx.payment_method === 'cash' ? 'Cash' : 'Transfer'}
-                    </span>
-                  )}
+        <div className="card p-6 lg:col-span-3">
+          <p className="label-eyebrow mb-4">Penjualan Terbaru Saya</p>
+          <div className="flex flex-col divide-y divide-frost-200">
+            {recent.length === 0 && (
+              <p className="text-sm text-slate-450 py-2">Belum ada catatan.</p>
+            )}
+            {recent.map((tx) => (
+              <div key={tx.id} className="py-3 flex items-center justify-between text-sm">
+                <div>
+                  <p className="font-medium text-navy-900">{tx.products?.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-slate-450">{formatDateTime(tx.created_at)}</p>
+                    {tx.payment_method && (
+                      <span className={`label-eyebrow ${
+                        tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'
+                      }`}>
+                        {tx.payment_method === 'cash' ? 'Cash' : 'Transfer'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="num font-medium text-navy-900">
+                    {formatRupiah(Number(tx.quantity) * Number(tx.unit_price))}
+                  </p>
+                  <p className="text-xs text-slate-450">
+                    {formatNumber(tx.quantity)} {tx.products?.unit}
+                  </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="num font-medium text-navy-900">
-                  {formatRupiah(Number(tx.quantity) * Number(tx.unit_price))}
-                </p>
-                <p className="text-xs text-slate-450">
-                  {formatNumber(tx.quantity)} {tx.products?.unit}
-                </p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
