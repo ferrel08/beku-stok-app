@@ -70,6 +70,9 @@ export default function AdminTransactions() {
       unit_price: Number(tx.unit_price),
       cost_price: Number(tx.cost_price || 0),
       note: `[VOID] Pembatalan transaksi #${tx.id.slice(0, 8)}`,
+      is_void: true,
+      voided_at: new Date().toISOString(),
+      voided_by: user.id,
       created_by: user.id,
     })
 
