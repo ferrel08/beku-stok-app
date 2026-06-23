@@ -41,7 +41,6 @@ export default function AdminDashboard() {
             .select('id, product_id, quantity, unit_price, cost_price, type, created_at, note')
             .eq('type', 'out')
             .eq('is_void', false)
-            .not('note', 'like', '[VOID]%')
             .gte('created_at', since),
         ])
 
