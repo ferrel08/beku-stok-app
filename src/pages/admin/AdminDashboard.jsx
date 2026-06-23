@@ -38,9 +38,10 @@ export default function AdminDashboard() {
             .order('name'),
           supabase
             .from('stock_transactions')
-            .select('id, product_id, quantity, unit_price, cost_price, type, created_at')
+            .select('id, product_id, quantity, unit_price, cost_price, type, created_at, note')
             .eq('type', 'out')
             .eq('is_void', false)
+            .not('note', 'like', '[VOID]%')
             .gte('created_at', since),
         ])
 
