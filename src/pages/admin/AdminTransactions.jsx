@@ -64,16 +64,16 @@ export default function AdminTransactions() {
 
     const reverseType = tx.type === 'out' ? 'in' : 'out'
     const { error: stockError } = await supabase.from('stock_transactions').insert({
-      product_id: tx.product_id,
-      type: reverseType,
-      quantity: Number(tx.quantity),
-      unit_price: Number(tx.unit_price),
-      cost_price: Number(tx.cost_price || 0),
-      note: `[VOID] Pembatalan transaksi #${tx.id.slice(0, 8)}`,
-      is_void: true,
-      voided_at: new Date().toISOString(),
-      voided_by: user.id,
-      created_by: user.id,
+	  product_id: tx.product_id,
+	  type: reverseType,
+	  quantity: Number(tx.quantity),
+	  unit_price: Number(tx.unit_price),
+	  cost_price: Number(tx.cost_price || 0),
+	  note: `[VOID] Pembatalan transaksi #${tx.id.slice(0, 8)}`,
+	  is_void: true,
+	  voided_at: new Date().toISOString(),
+	  voided_by: user.id,
+	  created_by: user.id,
     })
 
     if (stockError) setErrorMsg('Transaksi di-void tapi stok gagal dikembalikan: ' + stockError.message)
