@@ -64,16 +64,16 @@ export default function AdminTransactions() {
 
     const reverseType = tx.type === 'out' ? 'in' : 'out'
     const { error: stockError } = await supabase.from('stock_transactions').insert({
-	  product_id: tx.product_id,
-	  type: reverseType,
-	  quantity: Number(tx.quantity),
-	  unit_price: Number(tx.unit_price),
-	  cost_price: Number(tx.cost_price || 0),
-	  note: `[VOID] Pembatalan transaksi #${tx.id.slice(0, 8)}`,
-	  is_void: true,
-	  voided_at: new Date().toISOString(),
-	  voided_by: user.id,
-	  created_by: user.id,
+      product_id: tx.product_id,
+      type: reverseType,
+      quantity: Number(tx.quantity),
+      unit_price: Number(tx.unit_price),
+      cost_price: Number(tx.cost_price || 0),
+      note: `[VOID] Pembatalan transaksi #${tx.id.slice(0, 8)}`,
+      is_void: true,
+      voided_at: new Date().toISOString(),
+      voided_by: user.id,
+      created_by: user.id,
     })
 
     if (stockError) setErrorMsg('Transaksi di-void tapi stok gagal dikembalikan: ' + stockError.message)
@@ -204,13 +204,17 @@ export default function AdminTransactions() {
                     </td>
                     {!voidTab && (
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => setConfirmVoid({ tx })}
-                          disabled={voidingId === tx.id}
-                          className="text-xs font-medium text-rust-500 hover:text-rust-600 disabled:opacity-40 border border-rust-500/30 hover:border-rust-500 px-2.5 py-1 rounded-md transition-colors"
-                        >
-                          {voidingId === tx.id ? 'Memproses…' : 'Void'}
-                        </button>
+                        {tx.type === 'out' ? (
+                          <button
+                            onClick={() => setConfirmVoid({ tx })}
+                            disabled={voidingId === tx.id}
+                            className="text-xs font-medium text-rust-500 hover:text-rust-600 disabled:opacity-40 border border-rust-500/30 hover:border-rust-500 px-2.5 py-1 rounded-md transition-colors"
+                          >
+                            {voidingId === tx.id ? 'Memproses…' : 'Void'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-450">-</span>
+                        )}
                       </td>
                     )}
                   </tr>
