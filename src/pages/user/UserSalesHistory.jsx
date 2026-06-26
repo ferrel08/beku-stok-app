@@ -14,7 +14,7 @@ export default function UserSalesHistory() {
       const since = daysAgo(30).toISOString()
       const { data } = await supabase
         .from('stock_transactions')
-        .select('id, quantity, unit_price, payment_method, note, created_at, products(name, unit)')
+        .select('id, quantity, unit_price, payment_method, is_void, note, created_at, products(name, unit)')
         .eq('type', 'out')
         .eq('created_by', user.id)
         .gte('created_at', since)
@@ -31,7 +31,10 @@ export default function UserSalesHistory() {
       const key = dateKey(tx.created_at)
       if (!groups[key]) groups[key] = { date: tx.created_at, items: [], total: 0 }
       groups[key].items.push(tx)
-      groups[key].total += Number(tx.quantity) * Number(tx.unit_price)
+      // transaksi void tidak ikut total harian
+      if (!tx.is_void) {
+        groups[key].total += Number(tx.quantity) * Number(tx.unit_price)
+      }
     })
     return Object.values(groups).sort((a, b) => new Date(b.date) - new Date(a.date))
   }, [transactions])
@@ -54,22 +57,29 @@ export default function UserSalesHistory() {
           </div>
           <div className="flex flex-col divide-y divide-frost-200">
             {day.items.map((tx) => (
-              <div key={tx.id} className="py-2.5 flex items-center justify-between text-sm">
+              <div key={tx.id} className={`py-2.5 flex items-center justify-between text-sm ${tx.is_void ? 'opacity-50' : ''}`}>
                 <div>
-                  <p className="text-navy-900">{tx.products?.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-navy-900 ${tx.is_void ? 'line-through' : ''}`}>{tx.products?.name}</p>
+                    {tx.is_void && (
+                      <span className="label-eyebrow text-rust-500 bg-rust-500/10 border border-rust-500/20 px-1.5 py-0.5 rounded">
+                        VOID
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     {tx.note && <p className="text-xs text-slate-450">{tx.note}</p>}
-                    {tx.payment_method && (
-                      <span className={`label-eyebrow ${
-                        tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'
-                      }`}>
+                    {tx.payment_method && !tx.is_void && (
+                      <span className={`label-eyebrow ${tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'}`}>
                         {tx.payment_method === 'cash' ? 'Cash' : 'Transfer'}
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="num text-navy-900">{formatRupiah(Number(tx.quantity) * Number(tx.unit_price))}</p>
+                  <p className={`num ${tx.is_void ? 'text-slate-450 line-through' : 'text-navy-900'}`}>
+                    {formatRupiah(Number(tx.quantity) * Number(tx.unit_price))}
+                  </p>
                   <p className="text-xs text-slate-450">
                     {formatNumber(tx.quantity)} {tx.products?.unit}
                   </p>

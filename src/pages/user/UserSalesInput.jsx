@@ -39,7 +39,7 @@ export default function UserSalesInput() {
   async function loadRecent() {
     const { data } = await supabase
       .from('stock_transactions')
-      .select('id, quantity, unit_price, payment_method, note, created_at, products(name, unit)')
+      .select('id, quantity, unit_price, payment_method, note, created_at, is_void, products(name, unit)')
       .eq('type', 'out')
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
@@ -226,22 +226,27 @@ export default function UserSalesInput() {
               <p className="text-sm text-slate-450 py-2">Belum ada catatan.</p>
             )}
             {recent.map((tx) => (
-              <div key={tx.id} className="py-3 flex items-center justify-between text-sm">
+              <div key={tx.id} className={`py-3 flex items-center justify-between text-sm ${tx.is_void ? 'opacity-50' : ''}`}>
                 <div>
-                  <p className="font-medium text-navy-900">{tx.products?.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className={`font-medium text-navy-900 ${tx.is_void ? 'line-through' : ''}`}>{tx.products?.name}</p>
+                    {tx.is_void && (
+                      <span className="label-eyebrow text-rust-500 bg-rust-500/10 border border-rust-500/20 px-1.5 py-0.5 rounded">
+                        VOID
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-xs text-slate-450">{formatDateTime(tx.created_at)}</p>
-                    {tx.payment_method && (
-                      <span className={`label-eyebrow ${
-                        tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'
-                      }`}>
+                    {tx.payment_method && !tx.is_void && (
+                      <span className={`label-eyebrow ${tx.payment_method === 'cash' ? 'text-amber-500' : 'text-ice-600'}`}>
                         {tx.payment_method === 'cash' ? 'Cash' : 'Transfer'}
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="num font-medium text-navy-900">
+                  <p className={`num font-medium ${tx.is_void ? 'text-slate-450 line-through' : 'text-navy-900'}`}>
                     {formatRupiah(Number(tx.quantity) * Number(tx.unit_price))}
                   </p>
                   <p className="text-xs text-slate-450">
