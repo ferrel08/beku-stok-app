@@ -1,10 +1,20 @@
 import { formatRupiah, formatDateTime } from '../lib/format'
 
-function generateReceiptHTML({ receiptNumber, productName, quantity, unit, unitPrice, paymentMethod, note, createdAt, cashierName }) {
-  const total = quantity * unitPrice
+function generateReceiptHTML({ receiptNumber, items, paymentMethod, note, createdAt, cashierName }) {
+  const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
 
-  // Konversi logo jadi base64 supaya muncul di window print baru
-  // (window baru tidak bisa akses /logo.jpg lewat relative path)
+  const itemsHTML = items
+    .map(
+      (item) => `
+    <div class="product-name">${item.name}</div>
+    <div class="product-detail">
+      <span class="small">${item.quantity} ${item.unit} × ${formatRupiah(item.unitPrice)}</span>
+      <span class="bold">${formatRupiah(item.quantity * item.unitPrice)}</span>
+    </div>
+  `
+    )
+    .join('')
+
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -23,37 +33,13 @@ function generateReceiptHTML({ receiptNumber, productName, quantity, unit, unitP
     .center { text-align: center; }
     .bold { font-weight: bold; }
     .small { font-size: 10px; color: #555; }
-    .logo {
-      width: 50px; height: 50px;
-      border-radius: 50%;
-      object-fit: cover;
-      display: block;
-      margin: 0 auto 6px;
-    }
-    .divider {
-      border: none;
-      border-top: 1px dashed #999;
-      margin: 6px 0;
-    }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      margin: 2px 0;
-    }
+    .logo { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 6px; }
+    .divider { border: none; border-top: 1px dashed #999; margin: 6px 0; }
+    .row { display: flex; justify-content: space-between; margin: 2px 0; }
     .row .label { color: #555; }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      font-weight: bold;
-      font-size: 13px;
-      margin: 4px 0;
-    }
-    .product-name { margin-bottom: 2px; }
-    .product-detail {
-      display: flex;
-      justify-content: space-between;
-      color: #333;
-    }
+    .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin: 4px 0; }
+    .product-name { margin-bottom: 2px; margin-top: 6px; }
+    .product-detail { display: flex; justify-content: space-between; color: #333; }
     .footer { text-align: center; color: #777; font-size: 10px; margin-top: 4px; }
     @media print {
       @page { margin: 0; size: 58mm auto; }
@@ -77,23 +63,13 @@ function generateReceiptHTML({ receiptNumber, productName, quantity, unit, unitP
 
   <hr class="divider" />
 
-  <div class="bold" style="margin-bottom:4px">Detail Pembelian</div>
-  <div class="product-name">${productName}</div>
-  <div class="product-detail">
-    <span class="small">${quantity} ${unit} × ${formatRupiah(unitPrice)}</span>
-    <span class="bold">${formatRupiah(total)}</span>
-  </div>
+  <div class="bold">Detail Pembelian</div>
+  ${itemsHTML}
 
   <hr class="divider" />
 
-  <div class="total-row">
-    <span>TOTAL</span>
-    <span>${formatRupiah(total)}</span>
-  </div>
-  <div class="row">
-    <span class="label">Pembayaran</span>
-    <span>${paymentMethod === 'cash' ? 'Cash' : 'Transfer'}</span>
-  </div>
+  <div class="total-row"><span>TOTAL</span><span>${formatRupiah(total)}</span></div>
+  <div class="row"><span class="label">Pembayaran</span><span>${paymentMethod === 'cash' ? 'Cash' : 'Transfer'}</span></div>
   ${note ? `<div class="row"><span class="label">Catatan</span><span>${note}</span></div>` : ''}
 
   <hr class="divider" />
@@ -104,22 +80,16 @@ function generateReceiptHTML({ receiptNumber, productName, quantity, unit, unitP
   </div>
 
   <script>
-    // Tunggu gambar logo selesai load baru print
     window.onload = function() {
       var img = document.querySelector('img');
       function doPrint() {
         setTimeout(function() {
           window.print();
-          // Tutup window setelah print dialog ditutup
           setTimeout(function() { window.close(); }, 500);
         }, 300);
       }
-      if (img.complete) {
-        doPrint();
-      } else {
-        img.onload = doPrint;
-        img.onerror = doPrint; // tetap print walau logo gagal load
-      }
+      if (img.complete) { doPrint(); }
+      else { img.onload = doPrint; img.onerror = doPrint; }
     }
   </script>
 </body>
@@ -129,19 +99,8 @@ function generateReceiptHTML({ receiptNumber, productName, quantity, unit, unitP
 export default function ReceiptModal({ transaction, onClose }) {
   if (!transaction) return null
 
-  const {
-    receiptNumber,
-    productName,
-    quantity,
-    unit,
-    unitPrice,
-    paymentMethod,
-    note,
-    createdAt,
-    cashierName,
-  } = transaction
-
-  const total = quantity * unitPrice
+  const { receiptNumber, items, paymentMethod, note, createdAt, cashierName } = transaction
+  const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
 
   function handlePrint() {
     const html = generateReceiptHTML(transaction)
@@ -156,36 +115,23 @@ export default function ReceiptModal({ transaction, onClose }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-navy-950/60 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 bg-navy-950/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xs flex flex-col"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xs flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header modal */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-frost-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-frost-200 shrink-0">
           <p className="label-eyebrow">Preview Struk</p>
-          <button
-            onClick={onClose}
-            className="text-slate-450 hover:text-navy-900 transition-colors"
-            aria-label="Tutup"
-          >
+          <button onClick={onClose} className="text-slate-450 hover:text-navy-900 transition-colors" aria-label="Tutup">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
         </div>
 
-        {/* Preview struk */}
-        <div className="px-5 py-5 font-mono text-[12px] text-navy-900 leading-relaxed">
+        <div className="px-5 py-5 font-mono text-[12px] text-navy-900 leading-relaxed overflow-y-auto">
           <div className="text-center mb-3">
-            <img
-              src="/logo.jpg"
-              alt="Bunds Kitchen"
-              className="w-14 h-14 rounded-full object-cover mx-auto mb-2 border border-frost-200"
-            />
+            <img src="/logo.jpg" alt="Bunds Kitchen" className="w-14 h-14 rounded-full object-cover mx-auto mb-2 border border-frost-200" />
             <p className="font-bold text-[13px] tracking-wide">BUNDS KITCHEN</p>
             <p className="text-[10px] text-slate-450">Homemade With Love</p>
             <p className="text-[10px] text-slate-450">0811-1440-912</p>
@@ -198,13 +144,17 @@ export default function ReceiptModal({ transaction, onClose }) {
           <Divider />
 
           <p className="font-bold mb-1">Detail Pembelian</p>
-          <p className="truncate">{productName}</p>
-          <div className="flex justify-between mt-0.5">
-            <span className="text-slate-450">
-              {quantity} {unit} × {formatRupiah(unitPrice)}
-            </span>
-            <span className="font-bold">{formatRupiah(total)}</span>
-          </div>
+          {items.map((item, idx) => (
+            <div key={idx} className="mb-2">
+              <p className="truncate">{item.name}</p>
+              <div className="flex justify-between">
+                <span className="text-slate-450">
+                  {item.quantity} {item.unit} × {formatRupiah(item.unitPrice)}
+                </span>
+                <span className="font-bold">{formatRupiah(item.quantity * item.unitPrice)}</span>
+              </div>
+            </div>
+          ))}
 
           <Divider />
 
@@ -220,8 +170,7 @@ export default function ReceiptModal({ transaction, onClose }) {
           <p className="text-center text-[10px] text-slate-450">Semoga harimu menyenangkan 🧡</p>
         </div>
 
-        {/* Tombol aksi */}
-        <div className="px-5 pb-5 flex gap-2">
+        <div className="px-5 pb-5 pt-2 flex gap-2 shrink-0 border-t border-frost-200">
           <button
             onClick={handlePrint}
             className="flex-1 bg-navy-900 hover:bg-navy-800 text-frost-50 text-sm font-medium py-2.5 rounded-lg transition-colors"
